@@ -1,4 +1,0 @@
-python-telegram-bot==20.4
-apscheduler==3.11.1
-matplotlib
-nest_asyncio
