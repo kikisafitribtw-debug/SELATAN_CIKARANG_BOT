@@ -203,29 +203,6 @@ async def setup_scheduler(app):
     scheduler.start()
 
 # Jalankan bot + scheduler
-async def main():
-    await setup_scheduler(app)
-    await app.initialize()
-    await app.start()
-    await app.updater.start_polling()
-    import nest_asyncio
-nest_asyncio.apply()
-import asyncio
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters
-
-app = ApplicationBuilder().token(TOKEN).build()
-
-# Tambahkan handler
-app.add_handler(CommandHandler("start", start))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message))
-
-# Scheduler
-async def setup_scheduler(app):
-    scheduler = AsyncIOScheduler()
-    scheduler.add_job(laporan_harian, "cron", hour=23, minute=59, args=[app])
-    scheduler.start()
-
 import nest_asyncio
 nest_asyncio.apply()
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters
@@ -235,17 +212,17 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 TOKEN = "8482263728:AAEJI2AozPQZDmUNNmpEYr2_6MOkRDFD_Vw"
 ADMIN_ID = 5410925696
 
-# Buat Application
+# Buat Telegram Application
 app = ApplicationBuilder().token(TOKEN).build()
 
 # Tambahkan handler
 app.add_handler(CommandHandler("start", start))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message))
 
-# Scheduler
+# Scheduler langsung jalan tanpa memaksa loop baru
 scheduler = AsyncIOScheduler()
 scheduler.add_job(laporan_harian, "cron", hour=23, minute=59, args=[app])
 scheduler.start()
 
-# Jalankan bot polling saja
+# Jalankan bot polling normal
 app.run_polling()
