@@ -226,15 +226,26 @@ async def setup_scheduler(app):
     scheduler.add_job(laporan_harian, "cron", hour=23, minute=59, args=[app])
     scheduler.start()
 
-# Main
-async def main():
-    await setup_scheduler(app)
-    await app.initialize()
-    await app.start()
-    await app.updater.start_polling()  # tetap polling tapi jangan idle
+import nest_asyncio
+nest_asyncio.apply()
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-# Eksekusi
-asyncio.get_event_loop().run_until_complete(main())
+# Token & Admin
+TOKEN = "8482263728:AAEJI2AozPQZDmUNNmpEYr2_6MOkRDFD_Vw"
+ADMIN_ID = 5410925696
 
-# Eksekusi bot tanpa menutup loop
-asyncio.get_event_loop().run_until_complete(main())
+# Buat Application
+app = ApplicationBuilder().token(TOKEN).build()
+
+# Tambahkan handler
+app.add_handler(CommandHandler("start", start))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message))
+
+# Scheduler
+scheduler = AsyncIOScheduler()
+scheduler.add_job(laporan_harian, "cron", hour=23, minute=59, args=[app])
+scheduler.start()
+
+# Jalankan bot polling saja
+app.run_polling()
