@@ -186,8 +186,9 @@ async def start_scheduler(app):
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import nest_asyncio
 import asyncio
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters
 
-nest_asyncio.apply()  # biar event loop yang sudah ada bisa jalan
+nest_asyncio.apply()  # penting supaya event loop yang sudah ada bisa jalan
 
 app = ApplicationBuilder().token(TOKEN).build()
 
@@ -195,7 +196,7 @@ app = ApplicationBuilder().token(TOKEN).build()
 app.add_handler(CommandHandler("start", start))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message))
 
-# Scheduler di dalam fungsi async bawaan bot
+# Scheduler di dalam bot
 async def setup_scheduler(app):
     scheduler = AsyncIOScheduler()
     scheduler.add_job(laporan_harian, "cron", hour=23, minute=59, args=[app])
@@ -209,5 +210,5 @@ async def main():
     await app.updater.start_polling()
     await app.updater.idle()
 
-# Eksekusi
+# Eksekusi bot tanpa menutup loop
 asyncio.get_event_loop().run_until_complete(main())
