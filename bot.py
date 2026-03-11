@@ -1,4 +1,3 @@
-# bot.py
 import nest_asyncio
 nest_asyncio.apply()
 
@@ -36,62 +35,44 @@ conn.commit()
 # === Login tracking ===
 login_user = {}
 
-# === Reply Keyboards ===
+# === Keyboards ===
 menu_driver = ReplyKeyboardMarkup([
     ["🚕 Order","⛽ Bensin"],
     ["🍜 Makan","🅿 Parkir"],
     ["🔧 Servis","📊 Saldo"],
-    ["📅 Rekap Hari","📆 Rekap Minggu"],
-    ["🗓 Rekap Bulan","📈 Grafik"],
-    ["📱 REGIST MOD","💬 Chat Admin"],
-    ["🔑 Reset Password","🔐 Login"]
+    ["📈 Grafik","📱 REGIST MOD"]
 ], resize_keyboard=True)
 
-menu_admin = ReplyKeyboardMarkup([["👥 List Driver"],["📊 Semua Transaksi"]], resize_keyboard=True)
-menu_mod = ReplyKeyboardMarkup([["Shopee MOD"],["Grab MOD"],["Gojek MOD"],["Maxim MOD"]], resize_keyboard=True)
+menu_mod = ReplyKeyboardMarkup([
+    ["Shopee MOD"],["Grab MOD"],["Gojek MOD"],["Maxim MOD"]
+], resize_keyboard=True)
 
 # === Handlers ===
 async def start(update, context):
-    user_id = update.message.from_user.id
-    if user_id == ADMIN_ID:
-        await update.message.reply_text("Admin Panel", reply_markup=menu_admin)
-    else:
-        await update.message.reply_text(
-            f"✨ Halo {update.message.from_user.first_name}!\nSelamat datang di OJOL SELATAN CIKARANG\n\n"
-            "Daftar:\ndaftar Nama NomorHP Password\n\n"
-            "Login:\nlogin Nama Password"
-        )
+    await update.message.reply_text(
+        f"✨ Halo {update.message.from_user.first_name}!\nSelamat datang di OJOL SELATAN CIKARANG\n\n"
+        "Login:\nlogin Nama Password"
+    )
 
 async def laporan_harian(app):
     hari = str(datetime.now().date())
     c.execute("SELECT driver,tipe,jumlah FROM transaksi WHERE tanggal=?", (hari,))
     data = c.fetchall()
-    laporan = "📊 Laporan Harian\n"
-    for d in data:
-        laporan += f"{d[0]} {d[1]} {d[2]}\n"
-    await app.bot.send_message(ADMIN_ID, laporan)
+    if data:
+        laporan = "📊 Laporan Harian\n"
+        for d in data:
+            laporan += f"{d[0]} {d[1]} {d[2]}\n"
+        await app.bot.send_message(ADMIN_ID, laporan)
 
 async def message(update, context):
     text = update.message.text
     user = update.message.from_user.id
 
-    # Daftar
-    if text.startswith("daftar"):
-        data = text.split()
-        if len(data) != 4:
-            await update.message.reply_text("Format salah! Gunakan:\ndaftar Nama NomorHP Password")
-            return
-        nama, hp, pw = data[1], data[2], data[3]
-        c.execute("INSERT INTO drivers VALUES(NULL,?,?,?,?)",(nama,hp,pw,""))
-        conn.commit()
-        await update.message.reply_text("Pendaftaran berhasil")
-        return
-
     # Login
     if text.startswith("login"):
         data = text.split()
         if len(data) != 3:
-            await update.message.reply_text("Format salah! Gunakan:\nlogin Nama Password")
+            await update.message.reply_text("Format salah!\nlogin Nama Password")
             return
         nama, pw = data[1], data[2]
         c.execute("SELECT * FROM drivers WHERE name=? AND password=?", (nama, pw))
@@ -108,24 +89,24 @@ async def message(update, context):
 
     driver = login_user[user]
 
-    # MOD
+    # Pilih MOD
     if text == "📱 REGIST MOD":
         await update.message.reply_text("Pilih MOD", reply_markup=menu_mod)
     elif text in ["Shopee MOD","Grab MOD","Gojek MOD","Maxim MOD"]:
         c.execute("UPDATE drivers SET mod=? WHERE name=?", (text, driver))
         conn.commit()
+        await update.message.reply_text(f"MOD tersimpan: {text}")
         await context.bot.send_message(ADMIN_ID, f"{driver} memakai {text}")
-        await update.message.reply_text("MOD tersimpan. Silakan chat admin.")
         return
 
-    # Grafik penghasilan
+    # Grafik
     elif text == "📈 Grafik":
         c.execute("SELECT jumlah FROM transaksi WHERE driver=? AND tipe='order'", (driver,))
         data = c.fetchall()
-        nilai = [d[0] for d in data]
-        if not nilai:
+        if not data:
             await update.message.reply_text("Belum ada data")
             return
+        nilai = [d[0] for d in data]
         plt.plot(nilai)
         plt.title("Grafik Penghasilan")
         file = "grafik.png"
@@ -133,13 +114,13 @@ async def message(update, context):
         plt.close()
         await context.bot.send_photo(user, open(file,"rb"))
 
-    # Transaksi
+    # Input transaksi
     elif text.isdigit():
         tipe = context.user_data.get("tipe")
         if tipe:
             jumlah = int(text)
             tanggal = str(datetime.now().date())
-            c.execute("INSERT INTO transaksi VALUES(?,?,?,?)", (driver,tanggal,tipe,jumlah))
+            c.execute("INSERT INTO transaksi VALUES(?,?,?,?)",(driver,tanggal,tipe,jumlah))
             conn.commit()
             await update.message.reply_text("Data tersimpan")
 
@@ -152,5 +133,5 @@ scheduler = AsyncIOScheduler()
 scheduler.add_job(laporan_harian, "cron", hour=23, minute=59, args=[app])
 scheduler.start()
 
-# === Run polling (stabil di Railway) ===
+# === Run polling ===
 app.run_polling()
